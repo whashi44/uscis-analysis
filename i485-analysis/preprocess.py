@@ -31,6 +31,7 @@ def main():
     data, header = extract(data_path)
     modify(data, header)
 
+
 # -----------------------------------------------------------------------------------------------------
 
 
@@ -64,6 +65,7 @@ def download(path="raw"):
             with open(file_path, "wb") as write_file:
                 print(f"saving .csv file:{link} to path")
                 write_file.write(requests.get(link).content)
+
 
 # -----------------------------------------------------------------------------------------------------
 
@@ -102,8 +104,7 @@ def rename(data_path="data", raw_path="raw"):
     # Find year and quarter information from file name ex. "I485_data_fy2014_qtr3.csv"
     for file in files:
         numbers = re.findall(
-            r"\d+",  # for number
-            file
+            r"\d+", file  # for number
         )  # 0th is I485, 1st is fiscal year, 2nd is quarter
         years.append(numbers[1])
         quarters.append(numbers[2])
@@ -119,14 +120,15 @@ def rename(data_path="data", raw_path="raw"):
     print(f"Removing special file, the 2013 quarter 3, due to its inconsistent format")
     os.remove(f"{data_path}/I485_data_fy2013_qtr3.csv")
 
+
 # -----------------------------------------------------------------------------------------------------
 
 
 def extract(data_path="data"):
     """Read csv file from data folder and perform following:
-        1. Extract header information from the first file, assuming all other file have same/similar header information
-        2. Extract state and city application information
-        3. Convert them to numpy array and return
+    1. Extract header information from the first file, assuming all other file have same/similar header information
+    2. Extract state and city application information
+    3. Convert them to numpy array and return
     """
     # # Change directory to data folder
     # try:
@@ -163,9 +165,7 @@ def extract(data_path="data"):
                 found_family = False  # flag
                 found_other = False
                 # For concatinating the category and result
-                for category, status in zip(
-                    categories, results
-                ):
+                for category, status in zip(categories, results):
                     # Checking the condition, if category name appears, store the category name
                     # If not, then use the previous category name
                     # Then, cancatnate the category name and the status with ":"
@@ -221,8 +221,9 @@ def extract(data_path="data"):
     for file in files:
         print(f"working on file:{file}")
         # Find the year and quarter from the file name
-        numbers = re.findall(r"\d+", file  # for number
-                             )  # 0th is I485, 1st is fiscal year, 2nd is quarter
+        numbers = re.findall(
+            r"\d+", file  # for number
+        )  # 0th is I485, 1st is fiscal year, 2nd is quarter
         year = numbers[1]
         quarter = numbers[2]
 
@@ -247,11 +248,15 @@ def extract(data_path="data"):
                     # Loop until final city, vermont
                     while row[1] != "vermont":
                         # if 1st column is not empty, meaning this row is state
-                        if (row[0] != ""):
+                        if row[0] != "":
                             # grab the state name
                             state_name = row[0].title()
                             # For special case in 2017, 1st quarter for guam, the row is shifted so we need to grab it now
-                            if (year == "2017") and (quarter == "1") and (state_name == "Guam"):
+                            if (
+                                (year == "2017")
+                                and (quarter == "1")
+                                and (state_name == "Guam")
+                            ):
                                 # Grab current line because it has all the information
                                 row_with_state = row
                                 row_with_state[0] = state_name
@@ -270,7 +275,7 @@ def extract(data_path="data"):
 
                         # if the 1st column is empty, meaning this row is city
                         # some year has repeating the header at the middle of the line, hence 2nd if statement is counter for that (see 2018 qtr 1 Kentucky)
-                        elif (row[0] == "" and row[1] != ""):
+                        elif row[0] == "" and row[1] != "":
                             row_with_state = row
                             # adding the state name to the initial part
                             row_with_state[0] = state_name
@@ -309,23 +314,22 @@ def extract(data_path="data"):
 
     print("Converting empty strings, 'd' and 'D' to NaN")
     # Convert the empty strings and d or D to NaN
-    city_cases[city_cases == ''] = np.NaN
-    city_cases[city_cases == 'd'] = np.NaN
-    city_cases[city_cases == 'D'] = np.NaN
+    city_cases[city_cases == ""] = np.NaN
+    city_cases[city_cases == "d"] = np.NaN
+    city_cases[city_cases == "D"] = np.NaN
     # Convert the hyphen to 0
     print("Converting '-' to 0")
-    city_cases[city_cases == '-'] = 0
+    city_cases[city_cases == "-"] = 0
 
     return city_cases, header
 
 
 def modify(data, header):
-    """ Take the data and convert to pandas data frame
-    """
+    """Take the data and convert to pandas data frame"""
     # Dataframe for easier manipulation
     df_original = pd.DataFrame(data=data, columns=header)
     # We don't need abbreviation for cities, so drop those
-    df_original = df_original.drop(columns='Abbreviation')
+    df_original = df_original.drop(columns="Abbreviation")
     # Currently, there are excess columns, so simplify by adding category row
     # So there will be only columns for State,city,received,approved,denied,pending,category
     # First, let's slice the data frame into location(state & city), family, employment, humanitarian, other, total, and time (year & quarter)
@@ -340,17 +344,19 @@ def modify(data, header):
 
     # Using fiscal year package, we can identify the date and year
     # start attribute indicate the start of the fiscal quarter, date() is simply to return only dates, not time
-    time['Start_date'] = time.apply(
-        lambda row: FiscalQuarter(row.Year, row.Quarter).start.date(), axis=1)
-    time['End_date'] = time.apply(
-        lambda row: FiscalQuarter(row.Year, row.Quarter).end.date(), axis=1)
+    time["Start_date"] = time.apply(
+        lambda row: FiscalQuarter(row.Year, row.Quarter).start.date(), axis=1
+    )
+    time["End_date"] = time.apply(
+        lambda row: FiscalQuarter(row.Year, row.Quarter).end.date(), axis=1
+    )
 
     # Store all data frame into list to loop through
     all_df = [family, employment, humanitarian, other, total]
     # Let's rename the columns name, and then put "category" column with corresponding names
-    category_list = ['Family', 'Employment', 'Humanitarian', 'Other', 'Total']
+    category_list = ["Family", "Employment", "Humanitarian", "Other", "Total"]
     # I also want to change the name of the columns
-    new_names = ['Received', 'Approved', 'Denied', 'Pending']
+    new_names = ["Received", "Approved", "Denied", "Pending"]
     for i, df in enumerate(all_df):
         # Grab column names
         col_names = list(df.columns.values)
@@ -359,7 +365,7 @@ def modify(data, header):
         # Rename the columns i.e. Family:application_received -> Received
         df = df.rename(columns=name_dict)
         # Keep the category i.e. Family, employment
-        df['Category'] = category_list[i]
+        df["Category"] = category_list[i]
         # concatinate location(state,city) this data frame, and time
         df = pd.concat([location, df, time], axis=1, sort=False)
 
@@ -368,9 +374,9 @@ def modify(data, header):
 
     # There is annoying comma in the number, so remove those
     for col in new_names:
-        df_final[col] = df_final[col].str.replace(',', '')
+        df_final[col] = df_final[col].str.replace(",", "")
 
-    save_file = 'I485_data_all.csv'
+    save_file = "I485_data_all.csv"
     # save to csv file, without the index name
     df_final.to_csv(save_file, index=False)
     print(f"saved to {save_file}")
